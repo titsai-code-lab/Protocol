@@ -1,0 +1,53 @@
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+import umap
+import matplotlib.pyplot as plt
+
+# Load data from Excel
+data = pd.read_excel('mAB_Sequence.xlsx')
+# Drop rows where the 'HC' column has missing values
+data = data.dropna(subset=['HC'])
+
+# Extract the sequence column
+sequences = data['HC']
+
+# Function to generate k-mers
+def get_kmers(sequence, k=3):
+    return [sequence[x:x+k] for x in range(len(sequence) - k + 1)]
+
+# Convert sequences to k-mer words
+kmer_sequences = sequences.apply(lambda x: ' '.join(get_kmers(x)))
+
+# Vectorize k-mers
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(kmer_sequences)
+
+# UMAP reduction
+reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, metric='cosine', random_state=42)
+embedding = reducer.fit_transform(X.toarray())
+
+# Check the embedding values
+print("Embedding shape:", embedding.shape)
+print("Embedding sample data:", embedding[:5])
+
+# Generate some data for color mapping (Example: Random values as intensity)
+metric = np.random.rand(embedding.shape[0])  # Assuming you need random data for demonstration
+
+# Plot
+plt.figure(figsize=(12, 10))
+sc = plt.scatter(embedding[:, 0], embedding[:, 1], alpha=0.3, s=300, c=metric, cmap='viridis')
+plt.title('UMAP Analysis of Antibody Campaign (HC)', fontsize=26, pad=20)
+plt.xlabel('UMAP-1', fontsize=20)
+plt.ylabel('UMAP-2', fontsize=20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+
+# Create colorbar
+cbar = plt.colorbar(sc)
+cbar.set_label('Intensity', fontsize=20)  # Set colorbar label fontsize
+cbar.ax.tick_params(labelsize=20)  # Set colorbar tick label fontsize
+
+# Save the plot
+plt.savefig('UMAP_HC.png', dpi=600, transparent=True, format='png')
+plt.show()
